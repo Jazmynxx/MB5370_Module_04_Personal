@@ -20,6 +20,9 @@ library("tidyverse")
 # Load the data (mpg is built into ggplot2)
 ```{r}
 data(mpg)
+#displ= engine size in L
+#hwy= fuel efficiency in miles per gallon
+?mpg
 ```
 
 
@@ -34,7 +37,7 @@ summary(mpg)
 # Create first plot
 ```{r}
 ggplot(data = mpg) + 
-  geom_point(mapping = aes(x = disp, y = hwy))
+  geom_point(mapping = aes(x = displ, y = hwy))
 ```
 
 The plot shows a negative relationship between engine size (displ) and fuel efficiency (hwy). In other words, cars with big engines use more fuel. What does this say about fuel efficiency and engine size?
@@ -94,15 +97,29 @@ ggplot(data = mpg) +
 ```
 
 
-# Troubleshooting 
+# Alpha?
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, alpha = class))
+```
 
+# Question- what happens if u map an aesthetic to something other than a variable name?
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, colour = displ < 5))
+```
 
+Trouble Shooting:
+```{r}
+ggplot(data = mpg)  
++ geom_point(mapping = aes(x = displ, y = hwy)) 
+# the + should be on top line
+ggplot(data = mpg) +
+  geom_point(mapping = aes(x = displ, y = hwy)) 
+# the + should be on top line
+```
 
-
-
-
-# Faceting
-
+Faceting:
 ## facet_wrap
 Split the plot out by car type (class)
 ```{r}
@@ -126,7 +143,7 @@ Note that there are no occurrences of 5 cylinder 4WDs OR RWD vehicles!
 ```{r}
 ggplot(data = mpg) + 
   geom_point(mapping = aes(x = displ, y = hwy)) + 
-  facet_grid(cyl ~ .)
+  facet_grid(. ~ cyl)
   #facet_grid(. ~ cyl) # Alternatively
 
 ```
@@ -135,11 +152,12 @@ ggplot(data = mpg) +
 Read ?facet_wrap. What does nrow do? What does ncol do? What other options control the layout of the individual panels? 
 
 ```{r}
-
+?facet_wrap
 ```
+nrow and ncol dont do anything in facet wrap
 
 
-# Lines
+Fitting simple lines
 We already used points:
 ```{r}
 ggplot(data = mpg) + 
@@ -153,6 +171,9 @@ However, ggplot2 can use a variety of geom objects to represent the data. Here, 
 ```{r}
 ggplot(data = mpg) + 
   geom_smooth(mapping = aes(x = displ, y = hwy))
+#vs geom_line
+ggplot(data = mpg) + 
+  geom_line(mapping = aes(x = displ, y = hwy))
 ```
 ### Question: whey don't we use geom_line() here? What would that look like? ###
 
@@ -163,7 +184,7 @@ So let’s recap. A geom is an object that your plot uses to represent the data.
 ```{r}
 ggplot(data = mpg) + 
   #geom_point(mapping = aes(x = displ, y = hwy)) + # points horrible 
-  geom_smooth(mappings = aes(x = displ, y = hwy)) # try smooth line
+  geom_smooth(mapping = aes(x = displ, y = hwy, colour = "pink")) # try smooth line
 ```
 
 Question: how does R work out where to plot the line??? Can use the chunk output to inform us. Can also use the help menu.
@@ -171,7 +192,7 @@ Question: how does R work out where to plot the line??? Can use the chunk output
 # Changing linetype
 ```{r}
 ggplot(data = mpg) + 
-  geom_smooth(mapping = aes(x = displ, y = hwy, linetype = drv)) # Can also use "lty = " for the same result
+  geom_smooth(mapping = aes(x = displ, y = hwy, linetype = drv, colour = drv)) # Can also use "lty = " for the same result
 ```
 
 
@@ -194,7 +215,7 @@ ggplot(data = mpg) +
 We already did this one way
 ```{r}
 ggplot(data = mpg) + 
-  geom_point(mapping = aes(xx = displ, y = hwy)) +
+  geom_point(mapping = aes(x = displ, y = hwy)) +
   geom_smooth(mapping = aes(x = displ, y = hwy))
 ```
 
@@ -220,6 +241,7 @@ Now we have different colours to indicate the raw data (geom_point) and one colo
 ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
   geom_point(mapping = aes(color = class)) + 
   geom_smooth(data = filter(mpg, class == "subcompact"), se = FALSE)
+?geom_smooth
 ```
 Question: what does the "se = FALSE" do?
 
@@ -229,7 +251,24 @@ Question: what does the "se = FALSE" do?
 2.  Run this code in your head and predict what the output will look like. Then, run the code in R and check your predictions.
 
 ```{r}
+#Line
+ggplot (data = mpg) +
+  geom_line(mapping = aes(x=displ, y = hwy, colour = "coral"), 
+             show.legend = FALSE)
+#boxplot
+ggplot (data = mpg) +
+  geom_boxplot(mapping = aes(x=displ, y = hwy, group = drv))
 
+#histogram
+ggplot (data = mpg) +
+  geom_histogram(mapping = aes(x = hwy))
+
+ggplot (data = mpg) +
+  geom_histogram(mapping = aes(x = displ))
+
+#area chart
+ggplot (data = mpg) +
+  geom_area(mapping = aes(x = displ, y = hwy))
 ```
 
 
@@ -245,7 +284,8 @@ ggplot() +
 ```
 
 
-# Transformations and stats
+Transformations and stats:
+moving on to a new data set, diamonds
 
 ## Load data
 ```{r}
@@ -257,9 +297,12 @@ glimpse(diamonds)
 ```{r}
 ggplot(data = diamonds) + 
   geom_bar(mapping = aes(x = cut))
+# and also by:
+ggplot(data = diamonds) + 
+  stat_count(mapping = aes(x = cut))
 ```
 
-# Overriding defaults
+Overriding defaults:
 Make some new data
 ```{r}
 demo <- tribble(
@@ -290,7 +333,7 @@ Question: does anyone get the warning that's in the workbook?
 Warning: `stat(prop)` was deprecated in ggplot2 3.4.0.
 If so, can use # geom_bar(mapping = aes(x = cut, y = stage(after_stat = prop), group = 1))
 
-# Plotting statistical details
+Plotting statistical details:
 ```{r}
 ggplot(data = diamonds) + 
   stat_summary(
@@ -302,7 +345,7 @@ ggplot(data = diamonds) +
 ```
 
 
-# Aesthetic adjustments adjustments
+Aesthetic adjustments adjustments:
 Another way to boost the way you can convey information with plots using ggplot2 is to use aesthetics like colour or fill to change aspects of bar colours. We already did this once, but there are multiple options available to you, including changing the fill our outline colours.
 
 ```{r}
