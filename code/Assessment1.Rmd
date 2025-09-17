@@ -105,3 +105,25 @@ ggplot(df_range, aes(x = Species, fill = Cover10)) +
   geom_hline(yintercept = seq(20,60,10), 
              linetype = "dashed", color = "grey70", size = 0.4)
 ```
+
+Prefer the depth on x axis
+```{r}
+ggplot(df_range, aes(y = Species, fill = Cover10)) +
+  geom_tile(aes(x = (Shallow + Deep)/2,   # midpoint
+                width = Deep - Shallow,   # span
+                height = 0.6),            # bar thickness
+            color = "black", alpha = 0.8) +
+  scale_fill_manual(values = c("Yes" = "tomato", "No" = "steelblue")) +
+  scale_x_continuous(limits = c(20,60), breaks = seq(20,60,10)) +  # normal order
+  labs(x = "Depth (m)", y = "Species", fill = ">10% cover") +
+  theme_minimal(base_size = 14) +  # bump up all text sizes
+  theme(
+    panel.grid = element_blank(),
+    axis.text.y = element_text(size = 12),
+    axis.text.x = element_text(size = 12),
+    axis.title = element_text(size = 14)
+  ) +
+  # Add depth guide lines
+  geom_vline(xintercept = seq(20,60,10), 
+             linetype = "dashed", color = "grey70", size = 0.4)
+```
