@@ -1,0 +1,23 @@
+---
+title: "MB5370 Module 04. Assessment 2- End-to-end data analysis"
+output: html_document
+author: "Jazmyn Wise"
+date: "18/09/2025"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading packages
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(readr)
+```
+
+Importing Data
+```{r}
+Assessment2 <- read_csv("data/Assessment2.csv")
+View(Assessment2)
+```
