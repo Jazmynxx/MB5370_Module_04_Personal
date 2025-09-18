@@ -1,0 +1,168 @@
+---
+title: "MB5370 Module 04. Workshop 3 - Data Wrangling"
+output: html_document
+author: "Jazmyn Wise"
+date: "18/09/2025"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading packages
+```{r}
+library(ggplot2)
+library(tidyverse)
+```
+
+~BACKGROUND KNOWLEDGE~
+Tibbles:
+What are tibbles? Well, basically a dataframe!
+They are slightly adjusted dataframes which were designed to keep up with recent advances in R. Some things that were useful in R a decade ago, now hinder users rather than help them, so tibbles are a kind of future proof data frame. 
+
+
+~TIDYING DATA USING TIDYR~
+Tidyr is part of the tidyverse package which we've already loaded.
+There are three rules for a tidy dataset:
+1. Each variable must have its own column.
+2. Each observation must have its own row.
+3. Each value must have its own cell.
+
+```{r}
+table1
+#> # A tibble: 6 × 4
+#>   country      year  cases population
+#>   <chr>       <int>  <int>      <int>
+#> 1 Afghanistan  1999    745   19987071
+#> 2 Afghanistan  2000   2666   20595360
+#> 3 Brazil       1999  37737  172006362
+#> 4 Brazil       2000  80488  174504898
+#> 5 China        1999 212258 1272915272
+#> 6 China        2000 213766 1280428583
+table2
+#> # A tibble: 12 × 4
+#>   country      year type           count
+#>   <chr>       <int> <chr>          <int>
+#> 1 Afghanistan  1999 cases            745
+#> 2 Afghanistan  1999 population  19987071
+#> 3 Afghanistan  2000 cases           2666
+#> 4 Afghanistan  2000 population  20595360
+#> 5 Brazil       1999 cases          37737
+#> 6 Brazil       1999 population 172006362
+#> # ... with 6 more rows
+table3
+#> # A tibble: 6 × 3
+#>   country      year rate             
+#> * <chr>       <int> <chr>            
+#> 1 Afghanistan  1999 745/19987071     
+#> 2 Afghanistan  2000 2666/20595360    
+#> 3 Brazil       1999 37737/172006362  
+#> 4 Brazil       2000 80488/174504898  
+#> 5 China        1999 212258/1272915272
+#> 6 China        2000 213766/1280428583
+```
+Only table 1 is tidy
+
+Using the pipe function: %>% (only for tidyverse) or |>
+```{r}
+# Compute rate per 10,000
+table1 %>% 
+  mutate(rate = cases / population * 10000)
+#> # A tibble: 6 × 5
+#>   country      year  cases population  rate
+#>   <chr>       <int>  <int>      <int> <dbl>
+#> 1 Afghanistan  1999    745   19987071 0.373
+#> 2 Afghanistan  2000   2666   20595360 1.29 
+#> 3 Brazil       1999  37737  172006362 2.19 
+#> 4 Brazil       2000  80488  174504898 5.61 
+#> 5 China        1999 212258 1272915272 1.67 
+#> 6 China        2000 213766 1280428583 1.67
+
+# Compute cases per year
+table1 %>% 
+  count(year, wt = cases)
+#> # A tibble: 2 × 2
+#>    year      n
+#>   <int>  <int>
+#> 1  1999 250740
+#> 2  2000 296920
+
+# Visualise changes over time
+library(ggplot2)
+ggplot(table1, aes(year, cases)) + 
+  geom_line(aes(group = country), colour = "grey50") + 
+  geom_point(aes(colour = country))
+```
+
+EXCERSIE 1:
+1. For each of the sample tables, describe what each observation and each column represents.
+Table 1. Each observation shows a countrys cases and populations for a specific year. Each column represents the country, year, number of cases, and population.
+
+Table 2. Each observation shows a country, year, type (cases or population), and count. Each column represents the country, year, type, and count.
+
+Table 3. Each observation shows a country, year, and rate (cases/population). Each column represents the country, year, and rate.
+
+2. Sketch out the processes you would use to calculate the rate for table2 and table3. You will need to perform four operations:
+a. Extract the number of TB cases per country per year
+b. Extract the matching population per country per year
+c. Divide cases by population, and multiply by 10,000
+d. Store back in the appropriate place
+```{r}
+table2_wide <- table2 %>%
+  pivot_wider(names_from = type, values_from = count) %>% 
+  mutate(rate = (cases / population) * 10000)
+table2_wide
+#Table 3
+table3_clean <- table3 %>%
+  separate(rate, into = c("cases", "population"), sep = "/", convert = TRUE) %>%
+  mutate(rate = (cases / population) * 10000)
+table3_clean
+```
+
+~LENGTHENING DATASETS~
+pivot_longer() makes datasets “longer” by increasing the number of rows and decreasing the number of columns, solving those common problems of data values in the variable names.
+facet_wrap() for if you want to group our data by year, or use it as a factor, and ggplot2 and most statistical packages cannot do this with data in columns.
+
+Using pivot_longer():
+```{r}
+billboard #premade tibble we'll use for this example
+
+billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), #this is the columns we want to pivot 
+    names_to = "week", #this is what the new column will be called
+    values_to = "rank" #this is what the new column will be called
+  )
+```
+
+Closer look at pivot_longer():
+```{r}
+df <- tribble(
+  ~id,  ~bp1, ~bp2,
+   "A",  100,  120,
+   "B",  140,  115,
+   "C",  120,  125
+)
+```
+So we've created a data set however, we want our new (tidy) dataset to have three variables: 
+id (which already exists)
+measurement (the column names) 
+value (the cell values)
+```{r}
+df |> 
+  pivot_longer(
+    cols = bp1:bp2,
+    names_to = "measurement",
+    values_to = "value"
+  ) #pivots and repeats id for each measurement
+```
+
+~WIDENING DATASETS~
+When we need to widen a dataset rather than lengthen it.
+Done using pivot_wider()
+Allows us to handle an observation if it is scattered across multiple rows. 
+```{r}
+cms_patient_experience 
+
+
+```
