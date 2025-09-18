@@ -420,3 +420,132 @@ Provides the following verbs to work with relational data:
 1. Mutating joins - add new variables to one dataframe from matching observations in another
 2. Filtering joins - filter observations from one data frame based on whether or not they match an observation in the other table
 3. Set operations - treat observations as if they are set elements
+
+Loading libraries:
+```{r}
+library(tidyverse)
+library(nycflights13)
+```
+
+Loooking at the data tables:
+```{r}
+airlines
+
+airports
+
+planes
+
+weather
+
+flights
+```
+These tables have the following relationships:
+flights connects to planes via a single variable, tailnum.
+flights connects to airlines through the carrier variable.
+flights connects to airports in two ways: via origin and dest variables.
+flights connects to weather via origin (the location), and year, month, day and hour (the time).
+
+~JOINING DATASETS~
+First need to identify the keys.
+A key is a variable (or set of variables) that uniquely identifies an observation in a table. I.e., tailnum uniquely identifies each plane. And year, month, day, hour, origin for weather.
+
+Two types of keys:
+1. Primary key- identifies an observation in its own table. I.e., planes$tailnum.
+2. Foreign key- identifies an observation in another table. I.e., flights$tailnum.
+
+So first step is to make sure the keys are unique, you can do this by count() the primary keys and look for entries greater than one:
+```{r}
+planes %>% 
+  count(tailnum) %>% 
+  filter(n > 1)
+#no entries greater than 1, so tailnum is a valid primary key
+
+weather %>% 
+  count(year, month, day, hour, origin) %>% 
+  filter(n > 1)
+#combination of year, month, day, hour, origin is a valid primary key
+```
+
+Sometimes there isnt an explicit primary key, like for the flights table:
+```{r}
+flights %>% 
+  count(year, month, day, flight) %>% 
+  filter(n > 1)
+
+flights %>% 
+  count(year, month, day, tailnum) %>% 
+  filter(n > 1)
+#there are multiple entries for each combination, so no explicit primary key
+```
+
+When there isnt a primary key, its sometimes useful to add one with mutate() and row_number().
+This is called a surrogate key.
+
+~MUTATING JOINS~
+Used for combining a pair of tables.
+Matches the observations in the two tables based on one or more keys, and copies across variables from one table to the other.
+mutate() adds variables to the right side of the data table.
+left_join() is the most common type of mutating join, it keeps all observations in the left table, and adds matching variables from the right table.
+
+Join types:
+left_join() keeps all observations in x (we’ll see this in our first example)
+right_join() keeps all observations in y
+full_join() keeps all observations in x and y
+
+```{r}
+flights2 <- flights %>% 
+  select(year:day, hour, origin, dest, tailnum, carrier)
+#first making a subset so its easier to see the variables
+
+flights2 %>%
+  select(-origin, -dest) %>% 
+  left_join(airlines, by = "carrier") #joining flights2 with airlines, using carrier as the key
+#left_join() keeps all rows in the left table (flights2) and adds matching columns from the right table (airlines)
+```
+
+What this did is add the airline names to the fights 2 dataframe, based on the carrier code. It added the names to the right. 
+
+We could have used the R base mutate() but its much more complicated and messy- so its better to use a mutating join:
+```{r}
+flights2 %>%
+  select(-origin, -dest) %>% 
+  mutate(name = airlines$name[match(carrier, airlines$carrier)]) #more messy/ complicated
+```
+
+~more info about joins in the workbook
+
+~PIPES~
+= help implement wrangling steps with less code. 
+So far we've learnt 'filter', 'group_by', 'summarize', and 'mutate' and coded them separately.. Pipes allow us to use them together in a sequence.
+We can use the base R pipes |>.
+
+Using pipes to tell this story: 
+  Little bunny Foo Foo
+	Went hopping through the forest
+	Scooping up the field mice
+	And bopping them on the head
+	
+```{r}
+little_bunny <- function() {
+  "Little bunny Foo Foo"
+}
+
+hop <- function() {
+  "went hopping through the forest"
+}
+
+scoop <- function(x) {
+  "scooping up the field mice"
+}
+
+bop <- function(x) {
+  "and bopping them on the head"
+}
+
+foo_foo <- little_bunny() %>%
+  hop() %>%
+  scoop() %>%
+  bop()
+
+
+```
