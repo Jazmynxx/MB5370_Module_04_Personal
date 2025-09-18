@@ -162,7 +162,241 @@ When we need to widen a dataset rather than lengthen it.
 Done using pivot_wider()
 Allows us to handle an observation if it is scattered across multiple rows. 
 ```{r}
-cms_patient_experience 
+cms_patient_experience #premade tibble we'll use for this example
 
+cms_patient_experience |> 
+  distinct(measure_cd, measure_title) #shows unique values in these columns
+```
+Neither of these columns will make particularly great variable names: measure_cd doesn’t hint at the meaning of the variable and measure_title is a long sentence containing spaces. We’ll use measure_cd as the source for our new column names for now, but in a real analysis you might want to create your own variable names that are both short and meaningful.
+
+pivot_wider() has the opposite interface to pivot_longer(): instead of choosing new column names, we need to provide the existing columns that define the values (values_from) and the column name (names_from):
+
+```{r}
+cms_patient_experience |> 
+  pivot_wider(
+    names_from = measure_cd, 
+    values_from = prf_rate
+  )
+```
+But this output still isn't quite right; we still seem to have multiple rows for each organization. That’s because, we also need to tell pivot_wider() which column or columns have values that uniquely identify each row; in this case those are the variables starting with "org":
+```{r}
+cms_patient_experience |> 
+  pivot_wider(
+    id_cols = starts_with("org"),
+    names_from = measure_cd,
+    values_from = prf_rate
+  )
+```
+Yay! This is the output we were looking for.
+
+Now, to further understand what pivot_wider does to our data:
+```{r}
+df <- tribble( #making a simple dataset for example
+  ~id, ~measurement, ~value,
+  "A",        "bp1",    100,
+  "B",        "bp1",    140,
+  "B",        "bp2",    115, 
+  "A",        "bp2",    120,
+  "A",        "bp3",    105
+)
+
+df |> 
+  pivot_wider(
+    names_from = measurement, #new column names
+    values_from = value #new column values
+  )
+```
+Pivot Process:
+```{r}
+# To start the pivoting process, pivot_wider() needs to first figure out what will go in the rows and columns. The new column names will be the unique values of measurement.
+df |> 
+  distinct(measurement) |> 
+  pull()
+
+#By default, the rows in the output are determined by all the variables that aren’t going into the new names or values. These are called the id_cols. Here there is only one column, but in general there can be any number.
+df |> 
+  select(-measurement, -value) |> 
+  distinct()
+#Pivot_widerthen combines these results to generate an empty data frame
+df |> 
+  select(-measurement, -value) |> 
+  distinct() |> 
+  mutate(x = NA, y = NA, z = NA)
+It then fills in all the missing values using the data in the input. In this case, not every cell in the output has a corresponding value in the input as there’s no third blood pressure measurement for patient B, so that cell remains missing.
+```
+
+EXERCISE 2:
+1. Why are pivot_longer() and pivot_wider() not perfectly symmetrical? Carefully consider the following example. 
+
+(Hint: look at the variable types and think about column names) pivot_longer() has a names_ptypes argument, e.g.  names_ptypes = list(year = double()). What does it do?
+```{r}
+
+stocks <- tibble(
+  year   = c(2015, 2015, 2016, 2016),
+  half  = c(   1,    2,     1,    2),
+  return = c(1.88, 0.59, 0.92, 0.17)
+)
+stocks %>% 
+  pivot_wider(names_from = year, values_from = return) %>% 
+  pivot_longer(`2015`:`2016`, names_to = "year", values_to = "return")
+
+#widening then lengthening again does not return to the original data frame. Why not?
+wide <- stocks %>% pivot_wider(names_from = year, values_from = return)# column names are "2015", "2016" (character labels)
+long_default <- wide %>% pivot_longer(`2015`:`2016`, names_to = "year", values_to = "return")
+# long_default$year is character ("2015", "2016"), not numeric
+```
+They're not perfectly symmetrical because when you pivot_wider, the new column names are character strings, even if they were originally numeric. So when you pivot_longer again, those column names become values in a character column, not numeric.
+
+And the argument names_ptypes allows you to specify the desired type for the names column when pivoting longer. For example, using names_ptypes = list(year = double()) would ensure that the 'year' column is treated as numeric (double) instead of character.
+
+2. Why does this code fail?
+```{r}
+table4a %>% 
+  pivot_longer(c(1999, 2000), names_to = "year", values_to = "cases")
+
+table4a #checking how the table looks
+
+#attempting to fix it:
+table4a %>% 
+  pivot_longer(c("1999", "2000"), names_to = "year", values_to = "cases") #yay fixed!
+```
+So the original code fails because the column names in table4a are character strings ("1999", "2000"), not numeric values (1999, 2000). When using pivot_longer, you need to specify the column names as they are in the data frame, which are character strings in this case. By enclosing them in "", the code works correctly. Instead it was trying to find columns number 1999 and 2000, which do not exist.
+
+3. Consider the sample tibble below. Do you need to make it wider or longer? What are the variables?
+```{r}
+preg <- tribble(
+  ~pregnant, ~male, ~female,
+  "yes",     NA,    10,
+  "no",      20,    12
+)
+# make longer, male and female are a variable.
+
+preg_long <- preg %>%
+  pivot_longer(cols = c(male, female),
+               names_to = "sex",
+               values_to = "count")
+```
+Yes, we needed to make the tribble longer. The variables are pregnant, sex and count
+
+~SEPARATING AND UNITING DATA TABLES~
+In table3, we see one column (rate) that contains two variables (cases and population). To address this, we can use the separate() function which separates one column into multiple columns wherever you designate.
+```{r}
+table3 #checking how the table looks, rate column has two variables in it separated by "/"
+
+table3 |> 
+  separate(rate, into = c("cases", "population")) #makes two new columns, but they're characters
+
+table3 %>% 
+  separate(rate, into = c("cases", "population"), convert = TRUE) #makes two new columns, and convert = TRUE changes them to numeric
+```
+By default, separate() will split values wherever it sees a non-alphanumeric character (i.e. a character that isn’t a number or letter). For example, in the code above, separate() split the values of rate at the forward slash characters. If you wish to use a specific character to separate a column, you can pass the character to the sep argument of separate(). For example, we could rewrite the code above as:
+table3 %>% 
+  separate(rate, into = c("cases", "population"), sep = "/")
+  
+You can also use separate() to split a column at a specific position. For example, if you wanted to split years into century and year within century, you could do:
+```{r}
+table3 %>% 
+  separate(year, into = c("century", "year"), sep = 2) #where sep = 2 means split after the second character
+```
+
+You can do the opposite of separate() using unite(), which combines multiple columns into a single column.
+
+```{r}
+table5 %>% 
+  unite(new, century, year, sep = "") #combines century and year into a new column called new, with no space between them
+```
+
+~WORKING WITH MISSING VALUES~
+1. NA (explicit absence)- presence of absent data.
+2. Fixed values- missing values represented most commonly by 0
+3. NaN (not a number)- result of undefined mathematical operations
+4. Blank cell (implicit absence)- absence of data.
+
+1. Explicit Values (NAs)
+```{r}
+treatment <- tribble(
+  ~person,           ~treatment, ~response,
+  "Derrick Whitmore", 1,         7,
+  NA,                 2,         10,
+  NA,                 3,         NA,
+  "Katherine Burke",  1,         4
+)
+
+treatment |>
+  fill(everything()) #fills in NAs with the value above it- "last observation carried forward". Can use argument .direction = "up" to fill in the other way
+```
+
+2. Fixed Values (missing value = 0):
+You can use dplyr::coalesce() to replace NA with 0.
+```{r}
+x <- c(1, 4, 5, 7, NA)
+
+coalesce(x, 0)
+```
+
+And sometimes you may have the opposite problem, where some other concrete value actually presents a missing value. I.e., from older software
+You can use dplyr::na_if().
+```{r}
+x <- c(1, 4, 5, 7, -99)
+
+na_if(x, -99)
+```
+
+3. NaN (not a number)
+Distinguish it using is.nan()
+```{r}
+x <- c(NA, NaN)
+x * 10
+x == 1
+
+is.na(x)
+is.nan(x)
+```
+
+4. Blank Cells (implicit absence)
+```{r}
+stocks <- tibble(
+  year  = c(2020, 2020, 2020, 2020, 2021, 2021, 2021),
+  qtr   = c(   1,    2,    3,    4,    2,    3,    4), #example we'll use
+  price = c(1.88, 0.59, 0.35,   NA, 0.92, 0.17, 2.66)
+)
+```
+
+This dataset has 2 missing observations: the price for 2020 Q4 is NA, and the price for 2021 Q1 is missing entirely. We can use complete() to make these implicit missing values explicit:
+```{r}
+stocks |> 
+  complete(year, qtr)
+
+#Or when we pivot_wider(), both missing values become explicit NAs:
+stocks |>
+  pivot_wider(
+    names_from = qtr, 
+    values_from = price
+  )
+```
+
+~IMPORTING DATA INTO R~
+Using readr package (part of tidyverse)
+
+For CSV files, the columns are separated by commas. Use read_csv()
+```{r}
+students <- read_csv("https://pos.it/r4ds-students-csv")
+```
+
+~NEXT STEPS~
+Once datas in, step 1 should be to assess whether its tidy.
+- Are observations in rows?
+- Are variables in columns?
+- Are values in cells?
+
++You also need to check if data is valid. Any off variables/ strange things like spelling errors.
+
+```{r}
+students #checking how the data looks
+```
+
+In favourite.food, character string N/A is not a real NA that R will recognize. We can use the na argument to address this. 
+read_csv() will only recognize empty strings as NAs- we need to edit that
+```{r}
 
 ```
