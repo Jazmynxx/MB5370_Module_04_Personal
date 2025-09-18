@@ -398,5 +398,25 @@ students #checking how the data looks
 In favourite.food, character string N/A is not a real NA that R will recognize. We can use the na argument to address this. 
 read_csv() will only recognize empty strings as NAs- we need to edit that
 ```{r}
+students <- read_csv("https://pos.it/r4ds-students-csv", na = c("N/A", "")) #now N/A and empty strings will be read as NAs
 
+students
 ```
+
+EXERCISE 3:
+1. Identify what is wrong with each of the following inline CSV files. What happens when you run the code?
+```{r}
+read_csv("a,b\n1,2,3\n4,5,6") #only 2 columns but 3 values
+read_csv("a,b,c\n1,2\n1,2,3,4") #3 columns but 2 values in 1st row and 4 in second
+read_csv("a,b\n\"1") #missing end quote
+read_csv("a,b\n1,2\na,b") #letters in numeric column/ different types in columns
+read_csv("a;b\n1;3") #wrong delimiter, should be comma not semicolon
+```
+
+~RATIONAL DATA~
+= Collection of multiple data tables in a dataset that are related to each other
+Using dplyr package (part of tidyverse).
+Provides the following verbs to work with relational data:
+1. Mutating joins - add new variables to one dataframe from matching observations in another
+2. Filtering joins - filter observations from one data frame based on whether or not they match an observation in the other table
+3. Set operations - treat observations as if they are set elements
