@@ -1,0 +1,25 @@
+---
+title: "MB5370 Module 04. Workshop 4 - Spatial Data In R"
+output: html_document
+author: "Jazmyn Wise"
+date: "19/09/2025"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading packages
+```{r}
+library(tidyverse)
+library(sf) # simple features
+library (terra) # for raster
+library(tmap) # Thematic maps are geographical maps in which spatial data distributions are visualized
+library(readr)
+library(here)
+```
+
+Importing the dataset
+```{r}
+read_csv(here("data", "Workshop4", "copepods_raw.csv"))
+```
